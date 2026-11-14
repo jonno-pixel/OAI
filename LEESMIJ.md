@@ -15,9 +15,9 @@ Geen Python, webview of externe Swift-bibliotheken nodig.
 
 Dit is broncode, nog geen gebouwde, ondertekende of op een iPhone geteste app.
 De minimumversie is op jouw verzoek iOS 27.0, voor iPhone. Er worden geen
-onbevestigde iOS-27-API's gebruikt. Beschikbaarheid van een passende SDK is hier
-niet vastgesteld. Xcode met iOS SDK 27 of nieuwer is noodzakelijk om deze
-configuratie te bouwen. Ook je iPhone moet iOS 27 of nieuwer draaien.
+onbevestigde iOS-27-API's gebruikt. Xcode met iOS SDK 27 of nieuwer is
+noodzakelijk om deze configuratie te bouwen. Ook je iPhone moet iOS 27 of
+nieuwer draaien.
 
 ## Begin hier vanaf Windows
 
@@ -28,9 +28,9 @@ configuratie te bouwen. Ook je iPhone moet iOS 27 of nieuwer draaien.
    deze chat niets naar GitHub geüpload.
 3. In GitHub: Actions → Build iPhone IPA → Run workflow. De workflow gebruikt
    een macOS-runner, die afhankelijk van je account geld of minuten kan kosten.
-4. De workflow toont de geïnstalleerde Xcode/SDK. Als de SDK lager dan 27 is,
-   stopt hij met uitleg. Gebruik dan een cloud-Mac met passende Xcode; een
-   macos-latest-runner heeft niet automatisch iedere toekomstige SDK.
+4. De workflow gebruikt de GitHub-runner `xcode-27` en toont de geïnstalleerde
+   Xcode/SDK. Deze runner is een preview en kan instabiel zijn of wachttijd hebben.
+   Als de SDK lager dan 27 is, stopt de build met uitleg.
 5. Na een geslaagde build download je het artifact ClockChat-unsigned-IPA.
    Pak het artifact uit; daarin staat ClockChat-unsigned.ipa.
 6. Importeer die IPA met AltStore Classic volgens de actuele officiële
