@@ -1,0 +1,27 @@
+PASS: Swift syntax: APIClient.swift
+PASS: Swift syntax: ChatStore.swift
+PASS: Swift syntax: ChatView.swift
+PASS: Swift syntax: ClockChatApp.swift
+PASS: Swift syntax: Domain.swift
+PASS: Swift syntax: Keychain.swift
+PASS: Swift syntax: SettingsView.swift
+PASS: OpenStep Xcode project parses
+PASS: Referenced file exists: APIClient.swift
+PASS: Referenced file exists: ChatStore.swift
+PASS: Referenced file exists: ChatView.swift
+PASS: Referenced file exists: ClockChatApp.swift
+PASS: Referenced file exists: Domain.swift
+PASS: Referenced file exists: Keychain.swift
+PASS: Referenced file exists: SettingsView.swift
+PASS: Referenced file exists: Assets.xcassets
+PASS: Asset catalog included in resources
+PASS: iOS 27.0 deployment target: Debug
+PASS: iOS 27.0 deployment target: Release
+PASS: Local network permission explanation
+PASS: No global arbitrary-load ATS bypass
+PASS: Shared Xcode scheme XML parses
+PASS: App icon exists
+PASS: Bash build script syntax
+
+NOT RUN: Swift type checking, Xcode build, signing, simulator, iPhone, live provider calls.
+Reason: no macOS/Xcode/Apple SDK or credentials available in this environment.

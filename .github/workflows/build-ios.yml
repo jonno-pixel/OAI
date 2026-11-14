@@ -1,0 +1,22 @@
+name: Build iPhone IPA
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  build:
+    runs-on: macos-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - name: Toon Xcode en SDK
+        run: |
+          xcodebuild -version
+          xcodebuild -showsdks
+      - name: Bouw zonder Apple-certificaat
+        run: bash scripts/build-ipa.sh
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ClockChat-unsigned-IPA
+          path: build/ClockChat-unsigned.ipa
+          if-no-files-found: error
