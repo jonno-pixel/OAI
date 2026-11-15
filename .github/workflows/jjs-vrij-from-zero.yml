@@ -1,0 +1,77 @@
+name: JJS Vrij 2.0 standalone native build
+on:
+  workflow_dispatch:
+  push:
+    branches: [jjs-vrij-from-zero]
+permissions:
+  contents: read
+jobs:
+  verify-and-build:
+    runs-on: macos-26
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: JJS-Vrij
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify source files and standalone project
+        run: |
+          python3 - <<'PYVERIFY'
+          import hashlib, json
+          from pathlib import Path
+          for name, expected in json.loads(Path('SourceManifest.json').read_text()).items():
+              assert hashlib.sha256(Path(name).read_bytes()).hexdigest() == expected, name
+          project = Path('JJSVrij.xcodeproj/project.pbxproj').read_text()
+          assert 'jjs-original' not in project
+          assert len(list(Path('Sources').glob('*.swift'))) == 8
+          PYVERIFY
+      - name: Verify iOS SDK and property lists
+        run: |
+          xcodebuild -version
+          plutil -lint Info.plist PrivacyInfo.xcprivacy JJSVrij.xcodeproj/project.pbxproj
+          python3 - <<'PYSDK'
+          import subprocess
+          sdk = subprocess.check_output(['xcrun','--sdk','iphoneos','--show-sdk-version'],text=True)
+          assert int(sdk.split('.')[0]) >= 26
+          PYSDK
+      - name: Test the newly written storage and transfer code
+        run: python3 scripts/verify.py
+      - name: Compile the new native application
+        run: |
+          set -o pipefail
+          bash scripts/build.sh CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" | tee build.log
+      - name: Verify and package IPA
+        run: |
+          APP=build/JJSVrij.xcarchive/Products/Applications/JJSVrij.app
+          file "$APP/JJSVrij"
+          lipo "$APP/JJSVrij" -verify_arch arm64
+          plutil -lint "$APP/Info.plist" "$APP/PrivacyInfo.xcprivacy"
+          test -s "$APP/LLAMA-LICENSE.txt"
+          otool -L "$APP/JJSVrij"
+          mkdir -p build/ipa/Payload
+          ditto "$APP" build/ipa/Payload/JJSVrij.app
+          cd build/ipa
+          zip -qry ../JJS-Vrij-2.0-unsigned.ipa Payload
+          unzip -t ../JJS-Vrij-2.0-unsigned.ipa
+      - name: Package standalone source and Xcode project
+        if: always()
+        run: |
+          mkdir -p build
+          zip -qry build/JJS-Vrij-2.0-source.zip Sources Tests scripts Frameworks Assets.xcassets JJSVrij.xcodeproj Info.plist PrivacyInfo.xcprivacy LLAMA-LICENSE.txt README.md SourceManifest.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: JJS-Vrij-2.0-native-IPA
+          path: JJS-Vrij/build/JJS-Vrij-2.0-unsigned.ipa
+          if-no-files-found: error
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: JJS-Vrij-2.0-source
+          path: JJS-Vrij/build/JJS-Vrij-2.0-source.zip
+          if-no-files-found: error
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: JJS-Vrij-2.0-build-log
+          path: JJS-Vrij/build.log
+          if-no-files-found: ignore
