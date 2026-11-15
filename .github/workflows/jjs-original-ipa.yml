@@ -44,7 +44,7 @@ jobs:
         run: |
           APP=build/JJS.xcarchive/Products/Applications/JJS.app
           file "$APP/JJS"
-          lipo -verify_arch arm64 "$APP/JJS"
+          lipo "$APP/JJS" -verify_arch arm64
           plutil -lint "$APP/Info.plist" "$APP/PrivacyInfo.xcprivacy"
           test -s "$APP/LLAMA-LICENSE.txt"
           test -s "$APP/Frameworks/llama.framework/llama"
