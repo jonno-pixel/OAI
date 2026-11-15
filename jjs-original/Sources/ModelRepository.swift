@@ -122,7 +122,9 @@ actor ModelRepository {
                     throw JJSFailure(message: "\(source.lastPathComponent) is geen GGUF-bestand.")
                 }
 
-                let name = source.lastPathComponent
+                let name = source.pathExtension.lowercased() == "gguf"
+                    ? source.lastPathComponent
+                    : source.lastPathComponent + ".gguf"
                 let target = staging.appendingPathComponent(name)
                 guard !FileManager.default.fileExists(atPath: target.path) else {
                     throw JJSFailure(message: "Dubbele bestandsnaam: \(name). Importeer modelgroepen apart.")
@@ -147,6 +149,52 @@ actor ModelRepository {
             try? FileManager.default.removeItem(at: staging)
             throw error
         }
+    }
+
+    func download(
+        _ urls: [URL],
+        status: @escaping @Sendable (String) async -> Void
+    ) async throws -> [ModelEntry] {
+        let temporary = FileManager.default.temporaryDirectory
+            .appendingPathComponent("JJS-download-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: temporary, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: temporary) }
+        var files: [URL] = []
+        for (index, url) in urls.enumerated() {
+            try Task.checkCancellation()
+            await status("Download \(index + 1) / \(urls.count) · \(url.lastPathComponent)")
+            let progress = GGUFDownloadProgress(prefix: "Download \(index + 1) / \(urls.count)", status: status)
+            let (download, response) = try await URLSession.shared.download(from: url, delegate: progress)
+            defer { try? FileManager.default.removeItem(at: download) }
+            guard let http = response as? HTTPURLResponse, http.statusCode == 200 else {
+                let code = (response as? HTTPURLResponse)?.statusCode ?? 0
+                throw JJSFailure(message: "Modeldownload mislukt (HTTP \(code)). Gebruik een rechtstreekse bestandslink, geen webpagina.")
+            }
+            try Task.checkCancellation()
+            var name = (response.suggestedFilename ?? url.lastPathComponent) as NSString
+            name = name.lastPathComponent as NSString
+            if name.pathExtension.lowercased() != "gguf" {
+                name = (name.deletingPathExtension + ".gguf") as NSString
+            }
+            let target = temporary.appendingPathComponent(name as String)
+            guard !FileManager.default.fileExists(atPath: target.path) else {
+                throw JJSFailure(message: "De downloadlinks leveren dezelfde bestandsnaam op. Download verschillende modellen apart.")
+            }
+            try FileManager.default.moveItem(at: download, to: target)
+            files.append(target)
+        }
+        try Task.checkCancellation()
+        await status("Download controleren en opslaan…")
+        return try importFiles(files)
+    }
+
+    func exportURLs(for entry: ModelEntry) throws -> [URL] {
+        let selected = try url(for: entry.path)
+        guard let part = shard(selected.lastPathComponent) else { return [selected] }
+        return try FileManager.default.contentsOfDirectory(
+            at: selected.deletingLastPathComponent(), includingPropertiesForKeys: nil
+        ).filter { shard($0.lastPathComponent)?.stem == part.stem }
+            .sorted { $0.lastPathComponent < $1.lastPathComponent }
     }
 
     func url(for path: String) throws -> URL {
@@ -178,4 +226,36 @@ private struct ImportRecord: Codable {
     let file: String
     let bytes: Int64
     let sha256: String
+}
+
+private final class GGUFDownloadProgress: NSObject, URLSessionDownloadDelegate, @unchecked Sendable {
+    private let prefix: String
+    private let status: @Sendable (String) async -> Void
+    private let lock = NSLock()
+    private var lastUpdate = Date.distantPast
+
+    init(prefix: String, status: @escaping @Sendable (String) async -> Void) {
+        self.prefix = prefix
+        self.status = status
+    }
+
+    func urlSession(_ session: URLSession, downloadTask: URLSessionDownloadTask,
+                    didFinishDownloadingTo location: URL) {}
+
+    func urlSession(_ session: URLSession, downloadTask: URLSessionDownloadTask,
+                    didWriteData bytesWritten: Int64, totalBytesWritten: Int64,
+                    totalBytesExpectedToWrite: Int64) {
+        lock.lock()
+        let now = Date()
+        let report = now.timeIntervalSince(lastUpdate) >= 0.5
+        if report { lastUpdate = now }
+        lock.unlock()
+        guard report else { return }
+        let received = ByteCountFormatter.string(fromByteCount: totalBytesWritten, countStyle: .file)
+        let expected = totalBytesExpectedToWrite > 0
+            ? " / " + ByteCountFormatter.string(fromByteCount: totalBytesExpectedToWrite, countStyle: .file)
+            : ""
+        let message = "\(prefix) · \(received)\(expected)"
+        Task { await status(message) }
+    }
 }

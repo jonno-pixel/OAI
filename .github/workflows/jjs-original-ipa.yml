@@ -1,45 +1,66 @@
-name: Build JJS 27bab73 IPA
+name: JJS native model-controlled IPA
 on:
   workflow_dispatch:
   push:
-    branches: [build-jjs-27bab73]
+    branches: [jjs-model-controlled-generation]
 permissions:
   contents: read
 jobs:
   build:
-    runs-on: macos-15
+    runs-on: macos-26
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
-      - name: Verify original files
+      - name: Verify build source
         run: |
           python3 - <<'PYVERIFY'
           import hashlib, json
           from pathlib import Path
-          for name, expected in json.loads(Path('jjs-original-sha256.json').read_text()).items():
+          for name, expected in json.loads(Path('jjs-build-sha256.json').read_text()).items():
               assert hashlib.sha256((Path('jjs-original') / name).read_bytes()).hexdigest() == expected, name
           PYVERIFY
-      - name: Build original app without signing
+      - name: Check Xcode and iOS SDK
+        run: |
+          xcodebuild -version
+          xcodebuild -showsdks
+          python3 - <<'PYSDK'
+          import subprocess
+          sdk = subprocess.check_output(['xcrun', '--sdk', 'iphoneos', '--show-sdk-version'], text=True).strip()
+          assert int(sdk.split('.')[0]) >= 26, f'iOS 26 SDK or newer required; found {sdk}'
+          PYSDK
+      - name: Test text, storage and UTF-8
+        working-directory: jjs-original
+        run: bash scripts/test_core.sh
+      - name: Test GGUF import, export and downloads
+        working-directory: jjs-original
+        run: python3 scripts/test_models.py
+      - name: Build native iOS Release
         working-directory: jjs-original
         run: |
           set -o pipefail
           bash scripts/build_signed.sh CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" | tee build.log
-      - name: Package unsigned IPA
+      - name: Check and package unsigned IPA
         working-directory: jjs-original
         run: |
+          APP=build/JJS.xcarchive/Products/Applications/JJS.app
+          file "$APP/JJS"
+          lipo -verify_arch arm64 "$APP/JJS"
+          plutil -lint "$APP/Info.plist" "$APP/PrivacyInfo.xcprivacy"
+          test -s "$APP/LLAMA-LICENSE.txt"
+          test -s "$APP/Frameworks/llama.framework/llama"
           mkdir -p build/package/Payload
-          ditto build/JJS.xcarchive/Products/Applications/JJS.app build/package/Payload/JJS.app
+          ditto "$APP" build/package/Payload/JJS.app
           cd build/package
-          zip -qry ../JJS-unsigned.ipa Payload
-          unzip -t ../JJS-unsigned.ipa
+          zip -qry ../JJS-1.1-unsigned.ipa Payload
+          unzip -t ../JJS-1.1-unsigned.ipa
       - uses: actions/upload-artifact@v4
         with:
-          name: JJS-27bab73-unsigned-IPA
-          path: jjs-original/build/JJS-unsigned.ipa
+          name: JJS-1.1-native-unsigned-IPA
+          path: jjs-original/build/JJS-1.1-unsigned.ipa
           if-no-files-found: error
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: JJS-27bab73-build-log
+          name: JJS-1.1-build-log
           path: jjs-original/build.log
           if-no-files-found: ignore

@@ -28,6 +28,10 @@ final class ChatStore: ObservableObject {
     @Published private(set) var status = "Starten…"
     @Published var problem: String?
     @Published var exportURL: URL?
+    @Published private(set) var isDownloadingModel = false
+    @Published private(set) var downloadStatus = ""
+    @Published private(set) var modelExportURLs: [URL] = []
+    private var modelDownload: Task<Void, Never>?
 
     private let defaults = UserDefaults.standard
     private let engine = LocalInferenceEngine()
@@ -201,6 +205,66 @@ final class ChatStore: ObservableObject {
         }
     }
 
+    func downloadModels(_ input: String) {
+        guard modelDownload == nil, let repository else { return }
+        let values = input.split(whereSeparator: \.isNewline).map {
+            String($0).trimmingCharacters(in: .whitespacesAndNewlines)
+        }.filter { !$0.isEmpty }
+        guard !values.isEmpty else {
+            problem = "Vul een rechtstreekse downloadlink naar een GGUF-bestand in."
+            return
+        }
+        var urls: [URL] = []
+        for value in values {
+            guard let url = URL(string: value),
+                  ["https", "http"].contains(url.scheme?.lowercased() ?? ""),
+                  url.host != nil else {
+                problem = "Ongeldige model-URL: \(value)"
+                return
+            }
+            urls.append(url)
+        }
+        isDownloadingModel = true
+        downloadStatus = "Download voorbereiden…"
+        modelDownload = Task { [weak self] in
+            guard let self else { return }
+            defer {
+                self.isDownloadingModel = false
+                self.modelDownload = nil
+            }
+            do {
+                let imported = try await repository.download(urls) { [weak self] value in
+                    await self?.setDownloadStatus(value)
+                }
+                try Task.checkCancellation()
+                self.models = try await repository.list()
+                if let first = imported.first { self.selectedModel = first.path }
+                self.downloadStatus = "Modeldownload voltooid"
+            } catch is CancellationError {
+                self.downloadStatus = "Download geannuleerd"
+            } catch let error as URLError where error.code == .cancelled {
+                self.downloadStatus = "Download geannuleerd"
+            } catch {
+                self.downloadStatus = "Modeldownload mislukt"
+                self.problem = error.localizedDescription
+            }
+        }
+    }
+
+    private func setDownloadStatus(_ value: String) {
+        downloadStatus = value
+    }
+
+    func cancelModelDownload() {
+        modelDownload?.cancel()
+    }
+
+    func shareModel(_ model: ModelEntry) async {
+        guard let repository else { return }
+        do { modelExportURLs = try await repository.exportURLs(for: model) }
+        catch { problem = error.localizedDescription }
+    }
+
     func deleteModel(_ model: ModelEntry) async {
         guard let repository, activeMessage == nil else { return }
         do {
@@ -214,12 +278,18 @@ final class ChatStore: ObservableObject {
         try await reader.read(url)
     }
 
-    func exportChats() async {
+    func exportChats(asText: Bool = false, selectedOnly: Bool = false) async {
         guard let database else { return }
         do {
+            let suffix = asText ? "txt" : "json"
             let destination = FileManager.default.temporaryDirectory
-                .appendingPathComponent("JJS-\(UUID().uuidString).json")
-            try await database.exportArchive().write(to: destination, options: .atomic)
+                .appendingPathComponent("JJS-\(UUID().uuidString).\(suffix)")
+            if asText {
+                let text = try await database.exportText(chat: selectedOnly ? selectedChat : nil)
+                try Data(text.utf8).write(to: destination, options: .atomic)
+            } else {
+                try await database.exportArchive().write(to: destination, options: .atomic)
+            }
             exportURL = destination
         } catch { problem = error.localizedDescription }
     }
@@ -229,7 +299,14 @@ final class ChatStore: ObservableObject {
         let access = url.startAccessingSecurityScopedResource()
         defer { if access { url.stopAccessingSecurityScopedResource() } }
         do {
-            try await database.importArchive(Data(contentsOf: url))
+            if url.pathExtension.lowercased() == "json" {
+                try await database.importArchive(Data(contentsOf: url))
+            } else {
+                let content = try await reader.read(url)
+                selectedChat = try await database.importText(
+                    content, title: url.deletingPathExtension().lastPathComponent
+                )
+            }
             await refreshChats()
             if selectedChat == nil { selectedChat = chats.first?.id }
             await refreshMessages()

@@ -96,3 +96,10 @@ struct UTF8Stream: Sendable {
         return String(decoding: pending, as: UTF8.self)
     }
 }
+
+// Raw mode preserves message content without a chat template or injected instructions.
+enum PromptText {
+    static func raw(_ turns: [EngineTurn]) -> String {
+        turns.map(\.content).joined(separator: "\n")
+    }
+}

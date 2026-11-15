@@ -7,6 +7,7 @@ import Vision
 
 actor AttachmentReader {
     private var speechTasks: [UUID: SFSpeechRecognitionTask] = [:]
+    private var speechContinuations: [UUID: CheckedContinuation<String, Error>] = [:]
 
     func read(_ url: URL) async throws -> String {
         let hasAccess = url.startAccessingSecurityScopedResource()
@@ -61,22 +62,33 @@ actor AttachmentReader {
         request.shouldReportPartialResults = false
 
         let taskID = UUID()
-        return try await withCheckedThrowingContinuation { continuation in
-            let task = recognizer.recognitionTask(with: request) { [weak self] result, error in
-                if let error {
-                    continuation.resume(throwing: error)
-                    Task { await self?.removeSpeechTask(taskID) }
-                } else if let result, result.isFinal {
-                    continuation.resume(returning: result.bestTranscription.formattedString)
-                    Task { await self?.removeSpeechTask(taskID) }
+        return try await withTaskCancellationHandler {
+            try Task.checkCancellation()
+            return try await withCheckedThrowingContinuation { continuation in
+                speechContinuations[taskID] = continuation
+                speechTasks[taskID] = recognizer.recognitionTask(with: request) { [weak self] result, error in
+                    let text = result?.isFinal == true ? result?.bestTranscription.formattedString : nil
+                    if text != nil || error != nil {
+                        Task { await self?.finishSpeech(taskID, text: text, error: error) }
+                    }
                 }
             }
-            speechTasks[taskID] = task
+        } onCancel: {
+            Task { await self.cancelSpeech(taskID) }
         }
     }
 
-    private func removeSpeechTask(_ id: UUID) {
-        speechTasks[id] = nil
+    private func finishSpeech(_ id: UUID, text: String?, error: Error?) {
+        guard let continuation = speechContinuations.removeValue(forKey: id) else { return }
+        speechTasks.removeValue(forKey: id)
+        if let error { continuation.resume(throwing: error) }
+        else { continuation.resume(returning: text ?? "") }
+    }
+
+    private func cancelSpeech(_ id: UUID) {
+        let task = speechTasks.removeValue(forKey: id)
+        finishSpeech(id, text: nil, error: CancellationError())
+        task?.cancel()
     }
 
     private func requestSpeechAuthorization() async throws {

@@ -5,7 +5,9 @@ enum CoreTests {
     static func main() async throws {
         testUTF8StreamingAtEveryBoundary()
         testGenerationOptionsRoundTrip()
+        testRawPromptPreservesInput()
         try await testConversationQueueAndJSONTransfer()
+        try await testTextTransferPreservesLargeContent()
         print("JJS core tests passed.")
     }
 
@@ -38,6 +40,39 @@ enum CoreTests {
         precondition(decoded.contextSize == 0)
         precondition(decoded.temperature == options.temperature)
         precondition(decoded.useMetal)
+    }
+
+    private static func testRawPromptPreservesInput() {
+        let large = String(repeating: "café 🙂\0", count: 100_000)
+        let turns = [
+            EngineTurn(role: "user", content: large),
+            EngineTurn(role: "assistant", content: "Antwoord"),
+            EngineTurn(role: "user", content: "Volgende vraag")
+        ]
+        precondition(PromptText.raw(turns) == large + "\nAntwoord\nVolgende vraag")
+        precondition(PromptText.raw([]).isEmpty)
+    }
+
+    private static func testTextTransferPreservesLargeContent() async throws {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("JJS-TextTests-\(UUID().uuidString)", isDirectory: true)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let db = try ChatDatabase(file: directory.appendingPathComponent("test.sqlite"))
+        let text = String(repeating: "Geen afkapping — café 🙂\0\n", count: 20_000)
+        let chat = try await db.importText(text, title: "Tekstbestand")
+        let messages = try await db.messages(chat: chat)
+        precondition(messages.count == 1 && messages[0].content == text)
+        precondition(messages[0].role == .user && messages[0].state == .complete)
+        let jobs = try await db.nextJob()
+        precondition(jobs == nil, "Import must not unexpectedly start generation")
+        let transcript = try await db.exportText(chat: chat)
+        precondition(transcript == "# Tekstbestand\n\nJij:\n" + text)
+        let archive = try await db.exportArchive()
+        let restored = try ChatDatabase(file: directory.appendingPathComponent("restored.sqlite"))
+        try await restored.importArchive(archive)
+        let chats = try await restored.chats()
+        let restoredMessages = try await restored.messages(chat: chats[0].id)
+        precondition(restoredMessages[0].content == text)
     }
 
     private static func testConversationQueueAndJSONTransfer() async throws {

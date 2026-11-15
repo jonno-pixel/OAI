@@ -1,5 +1,6 @@
 import SwiftUI
 import UniformTypeIdentifiers
+import UIKit
 
 @MainActor
 struct ModelsScreen: View {
@@ -7,6 +8,9 @@ struct ModelsScreen: View {
     @Environment(\.dismiss) private var dismiss
     @State private var importing = false
     @State private var deleting: ModelEntry?
+    @State private var showingDownload = false
+    @State private var downloadLinks = ""
+    @State private var sharing: ModelShare?
 
     var body: some View {
         NavigationStack {
@@ -14,6 +18,16 @@ struct ModelsScreen: View {
                 Section {
                     Button("GGUF-model importeren", systemImage: "square.and.arrow.down") {
                         importing = true
+                    }
+                    Button("GGUF downloaden via URL", systemImage: "arrow.down.circle") {
+                        showingDownload = true
+                    }
+                    .disabled(store.isDownloadingModel)
+                    if store.isDownloadingModel {
+                        ProgressView(store.downloadStatus)
+                        Button("Download annuleren", role: .cancel) { store.cancelModelDownload() }
+                    } else if !store.downloadStatus.isEmpty {
+                        Text(store.downloadStatus).font(.footnote)
                     }
                     Text("Kies één of meer GGUF-bestanden, of een map met modelbestanden. JJS controleert de GGUF-header en behoudt de bytes.")
                         .font(.footnote)
@@ -41,6 +55,27 @@ struct ModelsScreen: View {
                                 }
                             }
                         }
+                        .contextMenu {
+                            Button("Exporteer / deel GGUF", systemImage: "square.and.arrow.up") {
+                                Task {
+                                    await store.shareModel(model)
+                                    if !store.modelExportURLs.isEmpty {
+                                        sharing = ModelShare(urls: store.modelExportURLs)
+                                    }
+                                }
+                            }
+                        }
+                        .swipeActions(edge: .leading) {
+                            Button("Deel", systemImage: "square.and.arrow.up") {
+                                Task {
+                                    await store.shareModel(model)
+                                    if !store.modelExportURLs.isEmpty {
+                                        sharing = ModelShare(urls: store.modelExportURLs)
+                                    }
+                                }
+                            }
+                            .tint(.blue)
+                        }
                         .swipeActions {
                             Button("Verwijder", role: .destructive) { deleting = model }
                                 .disabled(store.isGenerating)
@@ -59,6 +94,36 @@ struct ModelsScreen: View {
             }
             .navigationTitle("Lokale modellen")
             .toolbar { Button("Gereed") { dismiss() } }
+            .sheet(item: $sharing) { share in ModelActivityView(urls: share.urls) }
+            .sheet(isPresented: $showingDownload) {
+                NavigationStack {
+                    Form {
+                        Section {
+                            TextEditor(text: $downloadLinks)
+                                .frame(minHeight: 140)
+                                .keyboardType(.URL)
+                                .textInputAutocapitalization(.never)
+                                .autocorrectionDisabled()
+                                .accessibilityLabel("Rechtstreekse GGUF-downloadlinks")
+                        } footer: {
+                            Text("Plak een rechtstreekse GGUF-bestandslink. Gebruik bij een gesplitst model één link per regel en voeg alle delen toe. De app downloadt naar opslag, controleert het GGUF-bestand en neemt het op in je modellenlijst. Voor importeren vanuit Bestanden gebruik je de importknop.")
+                        }
+                    }
+                    .navigationTitle("GGUF downloaden")
+                    .toolbar {
+                        ToolbarItem(placement: .cancellationAction) {
+                            Button("Annuleer") { showingDownload = false }
+                        }
+                        ToolbarItem(placement: .confirmationAction) {
+                            Button("Download") {
+                                store.downloadModels(downloadLinks)
+                                showingDownload = false
+                            }
+                            .disabled(downloadLinks.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                        }
+                    }
+                }
+            }
             .fileImporter(
                 isPresented: $importing,
                 allowedContentTypes: [.item, .folder],
@@ -86,4 +151,19 @@ struct ModelsScreen: View {
             }
         }
     }
+}
+
+private struct ModelShare: Identifiable {
+    let id = UUID()
+    let urls: [URL]
+}
+
+private struct ModelActivityView: UIViewControllerRepresentable {
+    let urls: [URL]
+
+    func makeUIViewController(context: Context) -> UIActivityViewController {
+        UIActivityViewController(activityItems: urls, applicationActivities: nil)
+    }
+
+    func updateUIViewController(_ controller: UIActivityViewController, context: Context) {}
 }

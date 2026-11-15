@@ -352,6 +352,30 @@ actor ChatDatabase {
         return try JSONEncoder().encode(ArchivedLibrary(conversations: archive))
     }
 
+    func exportText(chat id: String? = nil) throws -> String {
+        let selected = try chats().filter { id == nil || $0.id == id }
+        return try selected.map { chat in
+            let transcript = try messages(chat: chat.id).map { message in
+                let label = message.role == .user ? "Jij" : "JJS"
+                return "\(label):\n\(message.content)"
+            }.joined(separator: "\n\n")
+            return "# \(chat.title)\n\n\(transcript)"
+        }.joined(separator: "\n\n====================\n\n")
+    }
+
+    func importText(_ content: String, title: String) throws -> String {
+        try transaction {
+            let chat = try createChat(title: title)
+            try execute(
+                "INSERT INTO messages(id,chat,seq,role,content,state,created) VALUES(?,?,?,?,?,?,?)",
+                [.text(UUID().uuidString), .text(chat), .integer(0),
+                 .text(MessageRole.user.rawValue), .text(content),
+                 .text(MessageState.complete.rawValue), .real(Date().timeIntervalSince1970)]
+            )
+            return chat
+        }
+    }
+
     func importArchive(_ data: Data) throws {
         let archive = try JSONDecoder().decode(ArchivedLibrary.self, from: data)
         try transaction {

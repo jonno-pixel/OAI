@@ -47,10 +47,9 @@ actor LocalInferenceEngine {
         }
         model = loadedModel
 
-        guard llama_model_has_decoder(loadedModel),
-              let loadedVocabulary = llama_model_get_vocab(loadedModel) else {
+        guard let loadedVocabulary = llama_model_get_vocab(loadedModel) else {
             unload()
-            throw JJSFailure(message: "Dit GGUF-bestand bevat geen ondersteund tekstgeneratiemodel.")
+            throw JJSFailure(message: "De modelengine heeft voor dit GGUF-bestand geen vocabulary beschikbaar gesteld.")
         }
         vocabulary = loadedVocabulary
 
@@ -68,9 +67,9 @@ actor LocalInferenceEngine {
         }
         context = loadedContext
 
-        guard llama_n_ctx(loadedContext) >= 8 else {
+        guard llama_n_ctx(loadedContext) > 0 else {
             unload()
-            throw JJSFailure(message: "De modelcontext is te klein om te genereren.")
+            throw JJSFailure(message: "De modelengine heeft geen bruikbare context aangemaakt.")
         }
 
         batch = llama_batch_init(processingBatchSize, 0, 1)
@@ -79,10 +78,17 @@ actor LocalInferenceEngine {
 
     private func format(_ turns: [EngineTurn], template: String) throws -> String {
         guard let model else { throw JJSFailure(message: "Er is geen model geladen.") }
+        if template.lowercased() == "raw" {
+            return PromptText.raw(turns)
+        }
+        let modelTemplate = llama_model_chat_template(model, nil)
+        if template.isEmpty, modelTemplate == nil {
+            return PromptText.raw(turns)
+        }
         guard !turns.contains(where: {
             $0.role.utf8.contains(0) || $0.content.utf8.contains(0)
         }) else {
-            throw JJSFailure(message: "Berichten met NUL-tekens kunnen niet naar de C-chattemplate worden gestuurd.")
+            throw JJSFailure(message: "De C-chattemplate kan geen NUL-tekens verwerken. Kies raw in Instellingen om deze invoer rechtstreeks te tokeniseren.")
         }
 
         let strings = turns.flatMap { [$0.role, $0.content] }
@@ -103,7 +109,7 @@ actor LocalInferenceEngine {
 
         func apply(_ templatePointer: UnsafePointer<CChar>?) throws -> String {
             guard let templatePointer else {
-                throw JJSFailure(message: "Dit model heeft geen chattemplate. Kies een passende templatenaam in Instellingen.")
+                throw JJSFailure(message: "Deze chattemplate is niet beschikbaar. Kies raw voor rechtstreekse modelinvoer.")
             }
             let required = messages.withUnsafeBufferPointer {
                 llama_chat_apply_template(templatePointer, $0.baseAddress, $0.count, true, nil, 0)
@@ -132,7 +138,7 @@ actor LocalInferenceEngine {
         }
 
         if template.isEmpty {
-            return try apply(llama_model_chat_template(model, nil))
+            return try apply(modelTemplate)
         }
         return try template.withCString { try apply($0) }
     }
@@ -203,24 +209,12 @@ actor LocalInferenceEngine {
         }
     }
 
-    private func waitForThermalSafety(
-        emit: @Sendable (EngineUpdate) async throws -> Void
-    ) async throws {
-        while ProcessInfo.processInfo.thermalState == .serious
-            || ProcessInfo.processInfo.thermalState == .critical {
-            try Task.checkCancellation()
-            try await emit(.status("Generatie wacht tot de iPhone voldoende is afgekoeld."))
-            try await Task.sleep(for: .seconds(5))
-        }
-    }
-
     func generate(
         modelURL: URL,
         options: GenerationOptions,
         history: [EngineTurn],
         emit: @Sendable (EngineUpdate) async throws -> Void
     ) async throws -> GenerationResult {
-        try await waitForThermalSafety(emit: emit)
         try await emit(.status("Model laden…"))
         try load(modelURL: modelURL, options: options)
 
@@ -266,7 +260,6 @@ actor LocalInferenceEngine {
         var offset = 0
         while offset < promptTokens.count {
             try Task.checkCancellation()
-            try await waitForThermalSafety(emit: emit)
             let count = min(Int(processingBatchSize), max(1, capacity / 2), promptTokens.count - offset)
             try makeRoom(for: count)
             try decode(promptTokens[offset..<(offset + count)], at: window.count, logits: true)
@@ -284,7 +277,6 @@ actor LocalInferenceEngine {
         do {
             while true {
                 try Task.checkCancellation()
-                try await waitForThermalSafety(emit: emit)
                 let token = llama_sampler_sample(sampler, context, -1)
                 if llama_vocab_is_eog(vocabulary, token) { break }
 
