@@ -1,8 +1,8 @@
-name: Build original JJS IPA
+name: Build JJS 27bab73 IPA
 on:
   workflow_dispatch:
   push:
-    branches: [build-jjs-original]
+    branches: [build-jjs-27bab73]
 permissions:
   contents: read
 jobs:
@@ -34,12 +34,12 @@ jobs:
           unzip -t ../JJS-unsigned.ipa
       - uses: actions/upload-artifact@v4
         with:
-          name: JJS-unsigned-IPA
+          name: JJS-27bab73-unsigned-IPA
           path: jjs-original/build/JJS-unsigned.ipa
           if-no-files-found: error
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: JJS-build-log
+          name: JJS-27bab73-build-log
           path: jjs-original/build.log
           if-no-files-found: ignore
