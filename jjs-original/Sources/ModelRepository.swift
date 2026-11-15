@@ -47,7 +47,8 @@ actor ModelRepository {
             }
 
             if let part = shard(file.lastPathComponent), part.index != 1 { continue }
-            let relative = String(file.path.dropFirst(directory.path.count + 1))
+            let canonical = file.standardizedFileURL.resolvingSymlinksInPath()
+            let relative = canonical.pathComponents.dropFirst(directory.pathComponents.count).joined(separator: "/")
             let bytes: Int64
 
             if let part = shard(file.lastPathComponent) {

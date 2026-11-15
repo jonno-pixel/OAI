@@ -15,6 +15,12 @@ enum ModelRepositoryTests {
             try bytes.write(to: input.appendingPathComponent(name))
         }
         let imported = try await repository.importFiles([input])
+        if imported.isEmpty {
+            let listed = try await repository.list()
+            let directory = await repository.directory
+            let enumerated = FileManager.default.enumerator(atPath: directory.path)?.allObjects ?? []
+            FileHandle.standardError.write(Data("DEBUG root=\(directory.path) listed=\(listed) files=\(enumerated)\n".utf8))
+        }
         precondition(imported.count == 1 && imported[0].bytes == Int64(bytes.count * 2), "Imported: \(imported)")
         let exported = try await repository.exportURLs(for: imported[0])
         precondition(exported.count == 2)
