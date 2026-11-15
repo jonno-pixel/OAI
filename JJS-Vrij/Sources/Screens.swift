@@ -339,13 +339,13 @@ private struct Preferences: View {
                     TextField("Temperatuur", text: $temperature).keyboardType(.decimalPad)
                     Toggle("Apple Metal", isOn: $metal)
                 } header: { Text("Uitvoering") } footer: {
-                    Text("Er is geen appquotum voor tokens, berichten of generatieduur. iOS beheert geheugen, rekenkracht en de levenscyclus. Bij een volle context wordt actieve context verschoven; opgeslagen tekst blijft behouden.")
+                    Text("Context 0 gebruikt de standaardwaarde uit het modelbestand. Opgeslagen gesprekken blijven bewaard wanneer de actieve context verschuift.")
                 }
                 Section {
                     TextField("Leeg = modeltemplate · raw = directe tekst", text: $template)
                         .textInputAutocapitalization(.never).autocorrectionDisabled()
                 } header: { Text("Invoerformaat") } footer: {
-                    Text("JJS Vrij voegt geen systeemprompt, inhoudsfilter of verborgen vervolgopdracht toe. Raw biedt berichtinhoud gescheiden door regeleinden aan, zonder rolmarkeringen. Modellen zonder template gebruiken automatisch directe tekst.")
+                    Text("Laat dit veld leeg om het invoerformaat uit het modelbestand te gebruiken. Kies raw voor directe tekstinvoer.")
                 }
                 Button(saved ? "Instellingen bewaard" : "Bewaar instellingen", systemImage: saved ? "checkmark.circle" : "checkmark") {
                     Task { saved = await space.configure(context: context, temperature: temperature, metal: metal, template: template) }
@@ -356,7 +356,7 @@ private struct Preferences: View {
                     Text("Tekstimport bewaart het hele bestand als een nieuw bericht. Tekstexport is een leesbaar transcript. JSON bewaart de rollen en berichtstatussen. Afbeeldingen en PDF-scans worden lokaal als tekst gelezen; lokale spraakherkenning vraagt iOS-toestemming.")
                 }
                 Section("Over JJS Vrij") {
-                    LabeledContent("Versie", value: "2.0")
+                    LabeledContent("Versie", value: "2.0.1")
                     NavigationLink("Open-sourcelicentie") {
                         ScrollView { Text(license).textSelection(.enabled).padding() }.navigationTitle("Licentie")
                     }

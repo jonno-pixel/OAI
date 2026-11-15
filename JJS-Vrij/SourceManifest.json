@@ -19,7 +19,7 @@
   "Frameworks/llama.xcframework/ios-arm64/llama.framework/Modules/module.modulemap": "b5651903a342dc59fb4fe16ff9cc82ba4d08fdb142458aeacf516e7c31c15f15",
   "Frameworks/llama.xcframework/ios-arm64/llama.framework/llama": "d6728450d23332be4ea79aad8e8c81f64cdb94de178063e5e66d762959337ee4",
   "Info.plist": "efd7946f327862257f52280b17422bca4d380a622c88d030e8be08a2eefae877",
-  "JJSVrij.xcodeproj/project.pbxproj": "13e5aa8901c1a2320f07d90c028830b86a1c05b82e6c6950ce6c58600b98a119",
+  "JJSVrij.xcodeproj/project.pbxproj": "4e23154d0b2785800a5644dcd0acef9affe4ef3aa9d3d2b53eb850dcc0dd0c1b",
   "JJSVrij.xcodeproj/xcshareddata/xcschemes/JJSVrij.xcscheme": "f353331c59dd72653a426344a95a79fdd62f3764f8e217d37ad70f6f71498e50",
   "LLAMA-LICENSE.txt": "94f29bbed6a22c35b992c5c6ebf0e7c92f13b836b90f36f461c9cf2f0f1d010d",
   "PrivacyInfo.xcprivacy": "428580e037f2046a0c65b20e6345554aad9ca881b683922b8c81d8d272e197c2",
@@ -30,10 +30,10 @@
   "Sources/LibraryVault.swift": "c010cf22bd9e1a1c7dabdb8ea840acb2a72dd2ff2f34c486c7a81acc098f1580",
   "Sources/MediaReader.swift": "f042dc53101bbc88f9f00997e32d1ff01a89c5d0b0fe9ffcbe0c10d5987b6980",
   "Sources/ModelFiles.swift": "35afa35c514f9270b87cfdca4dcb303964db275a8008d37f2dfbb27de783a505",
-  "Sources/Screens.swift": "423cbdfe42420b92eb063936c5e1e7e7f8939996627c03748f572375cabb58e4",
+  "Sources/Screens.swift": "d77ba4bd6859e680c54dd43be0c0e4b31a4a1dcd00b5c0f6684c8b0ee63c33c5",
   "Sources/Workspace.swift": "7f256fc277898e44d389903bfd98eab560195356d66956149eaf23566ebe684a",
   "Tests/Verification.swift": "3afc751177eb2e07d35ddedf528710bacef64dc310ffc22e5ca34eec50f6b911",
   "scripts/build.sh": "026e26aebf50ea597767ab9c12e4cc857394ba7b05d4fe63530b6c3c0ebe6334",
-  "scripts/make_project.py": "3caeeb48a3f62a4ea41354f2eda5515234eb340be9122307284826abbb527c97",
+  "scripts/make_project.py": "5c12ae515a5a33ad71efc2beee5a6c78eea6fd2b0fecf3098f48b409065cb1a8",
   "scripts/verify.py": "bfaa7c89f60ba4efc0b24c696564daec386533a0b973b52d17dc3ca8e3a0f9f2"
 }

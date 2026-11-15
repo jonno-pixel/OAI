@@ -40,8 +40,8 @@ for mode in ['Debug', 'Release']:
     obj('project:' + mode, 'isa = XCBuildConfiguration; name = ' + mode + '; buildSettings = { SDKROOT = iphoneos; IPHONEOS_DEPLOYMENT_TARGET = 17.0; CLANG_ENABLE_MODULES = YES; };')
     settings = {
         'ASSETCATALOG_COMPILER_APPICON_NAME': 'AppIcon', 'CODE_SIGN_STYLE': 'Automatic',
-        'CODE_SIGNING_ALLOWED': 'YES', 'CURRENT_PROJECT_VERSION': '3',
-        'MARKETING_VERSION': '2.0', 'GENERATE_INFOPLIST_FILE': 'NO',
+        'CODE_SIGNING_ALLOWED': 'YES', 'CURRENT_PROJECT_VERSION': '4',
+        'MARKETING_VERSION': '2.0.1', 'GENERATE_INFOPLIST_FILE': 'NO',
         'INFOPLIST_FILE': 'Info.plist', 'PRODUCT_BUNDLE_IDENTIFIER': 'nl.jjs.vrij',
         'PRODUCT_NAME': 'JJSVrij', 'SWIFT_VERSION': '5.0',
         'IPHONEOS_DEPLOYMENT_TARGET': '17.0', 'SUPPORTED_PLATFORMS': 'iphoneos',
