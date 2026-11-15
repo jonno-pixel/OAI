@@ -57,7 +57,7 @@ jobs:
         if: always()
         run: |
           mkdir -p build
-          zip -qry build/JJS-Vrij-2.0-source.zip Sources Tests scripts Frameworks Assets.xcassets JJSVrij.xcodeproj Info.plist PrivacyInfo.xcprivacy LLAMA-LICENSE.txt README.md SourceManifest.json
+          zip -qry build/JJS-Vrij-2.0-source.zip .gitignore Sources Tests scripts Frameworks Assets.xcassets JJSVrij.xcodeproj Info.plist PrivacyInfo.xcprivacy LLAMA-LICENSE.txt README.md SourceManifest.json
       - uses: actions/upload-artifact@v4
         with:
           name: JJS-Vrij-2.0-native-IPA
