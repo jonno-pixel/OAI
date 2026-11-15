@@ -1,0 +1,45 @@
+name: Build original JJS IPA
+on:
+  workflow_dispatch:
+  push:
+    branches: [build-jjs-original]
+permissions:
+  contents: read
+jobs:
+  build:
+    runs-on: macos-15
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify original files
+        run: |
+          python3 - <<'PYVERIFY'
+          import hashlib, json
+          from pathlib import Path
+          for name, expected in json.loads(Path('jjs-original-sha256.json').read_text()).items():
+              assert hashlib.sha256((Path('jjs-original') / name).read_bytes()).hexdigest() == expected, name
+          PYVERIFY
+      - name: Build original app without signing
+        working-directory: jjs-original
+        run: |
+          set -o pipefail
+          bash scripts/build_signed.sh CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" | tee build.log
+      - name: Package unsigned IPA
+        working-directory: jjs-original
+        run: |
+          mkdir -p build/package/Payload
+          ditto build/JJS.xcarchive/Products/Applications/JJS.app build/package/Payload/JJS.app
+          cd build/package
+          zip -qry ../JJS-unsigned.ipa Payload
+          unzip -t ../JJS-unsigned.ipa
+      - uses: actions/upload-artifact@v4
+        with:
+          name: JJS-unsigned-IPA
+          path: jjs-original/build/JJS-unsigned.ipa
+          if-no-files-found: error
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: JJS-build-log
+          path: jjs-original/build.log
+          if-no-files-found: ignore
