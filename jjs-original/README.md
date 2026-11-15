@@ -1,4 +1,4 @@
-# JJS
+# JJS Vrij
 
 Een opnieuw opgebouwde SwiftUI-app voor lokale gesprekken met GGUF-modellen. De appcode staat opgesplitst in gewone Swift-bronbestanden; `JJS.xcodeproj` is het enige Xcode-project. De llama.cpp-iOS-engine en het bestaande JJS-appicoon worden als lokale projectresources gebruikt.
 
@@ -25,7 +25,7 @@ Het framework bevat alleen iOS-arm64. Simulator- en macOS-builds zijn daarom nie
 
 ## Codemagic
 
-De workflow staat in de root `codemagic.yaml`. Configureer in Codemagic je Apple Developer-integratie, ontwikkelcertificaat en provisioningprofiel voor `nl.jjs.local`. De workflow voert eerst `scripts/test_core.sh` uit, past daarna signingprofielen toe en archiveert/exporteert de ondertekende IPA.
+De workflow staat in de root `codemagic.yaml`. Configureer in Codemagic je Apple Developer-integratie, ontwikkelcertificaat en provisioningprofiel voor `nl.jjs.vrij`. De workflow voert eerst `scripts/test_core.sh` uit, past daarna signingprofielen toe en archiveert/exporteert de ondertekende IPA.
 
 Lokaal:
 
@@ -54,3 +54,5 @@ De batchgrootte van 256 is een verwerkingsbuffer, geen limiet voor bericht- of a
 De GitHub-workflow draait de coretests en overdrachtstests, compileert een iOS-arm64 Release-archief en controleert de verpakte app. De overdrachtstests gebruiken GGUF-headerfixtures om opslag en netwerkoverdracht te testen, geen daadwerkelijk inferentiemodel. Er is geen iPhone of echt GGUF-model in deze buildomgeving beschikbaar voor end-to-end-inferentietests.
 
 De geleverde IPA is ongetekend. Voor App Store-distributie zijn daarnaast Apple Distribution-ondertekening, provisioning, App Store Connect-gegevens, een publieke privacybeleid- en support-URL, screenshots, leeftijdsclassificatie en beoordeling door Apple nodig. De workflow levert geen bewijs van App Store-toelating of foutloze werking op alle toestellen.
+
+JJS Vrij gebruikt bundle-ID `nl.jjs.vrij` en installeert naast de oorspronkelijke JJS-app. Gebruik de JSON-export/import om bestaande gesprekken over te zetten.

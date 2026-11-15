@@ -15,7 +15,7 @@ enum ModelRepositoryTests {
             try bytes.write(to: input.appendingPathComponent(name))
         }
         let imported = try await repository.importFiles([input])
-        precondition(imported.count == 1 && imported[0].bytes == Int64(bytes.count * 2))
+        precondition(imported.count == 1 && imported[0].bytes == Int64(bytes.count * 2), "Imported: \(imported)")
         let exported = try await repository.exportURLs(for: imported[0])
         precondition(exported.count == 2)
         for file in exported { let exportedBytes = try Data(contentsOf: file); precondition(exportedBytes == bytes) }

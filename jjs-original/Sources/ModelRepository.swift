@@ -5,7 +5,7 @@ actor ModelRepository {
     let directory: URL
 
     init(directory: URL) throws {
-        self.directory = directory
+        self.directory = directory.standardizedFileURL.resolvingSymlinksInPath()
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
         var url = directory
         var values = URLResourceValues()
@@ -198,8 +198,8 @@ actor ModelRepository {
     }
 
     func url(for path: String) throws -> URL {
-        let root = directory.standardizedFileURL
-        let candidate = directory.appendingPathComponent(path).standardizedFileURL
+        let root = directory.standardizedFileURL.resolvingSymlinksInPath()
+        let candidate = directory.appendingPathComponent(path).standardizedFileURL.resolvingSymlinksInPath()
         guard candidate.path.hasPrefix(root.path + "/") else {
             throw JJSFailure(message: "Het modelpad ligt buiten de modellenmap.")
         }

@@ -6,7 +6,7 @@ workflows:
       xcode: latest
       ios_signing:
         distribution_type: development
-        bundle_identifier: nl.jjs.local
+        bundle_identifier: nl.jjs.vrij
     scripts:
       - name: Run Swift core tests
         script: bash scripts/test_core.sh

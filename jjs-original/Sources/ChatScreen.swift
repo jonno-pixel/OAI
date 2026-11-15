@@ -28,7 +28,7 @@ struct ChatScreen: View {
                     LazyVStack(alignment: .leading, spacing: 24) {
                         if store.messages.isEmpty {
                             ContentUnavailableView {
-                                Label("JJS", systemImage: "bubble.left.and.bubble.right")
+                                Label("JJS Vrij", systemImage: "bubble.left.and.bubble.right")
                             } description: {
                                 Text(store.models.isEmpty
                                      ? "Importeer een GGUF-model om lokaal te chatten."
@@ -64,7 +64,7 @@ struct ChatScreen: View {
                 .safeAreaInset(edge: .bottom, spacing: 0) { composer }
             }
             .background(Color(uiColor: .systemBackground))
-            .navigationTitle("JJS")
+            .navigationTitle("JJS Vrij")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
@@ -118,7 +118,7 @@ struct ChatScreen: View {
                     store.problem = error.localizedDescription
                 }
             }
-            .alert("JJS", isPresented: Binding(
+            .alert("JJS Vrij", isPresented: Binding(
                 get: { store.problem != nil },
                 set: { if !$0 { store.problem = nil } }
             )) {
