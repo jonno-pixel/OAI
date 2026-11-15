@@ -46,8 +46,13 @@ enum Verification {
         loaded.recoverInterruptedReplies()
         precondition(loaded.pending.isEmpty && loaded.conversations[0].letters[1].status == .stopped)
         precondition(loaded.conversations[0].letters[1].text == reply.text)
+        let ordinaryJSON = Data("{\"not_a_chat_archive\": \"café 🙂\"}".utf8)
+        let ordinaryImport = try LibraryVault.importDocument(ordinaryJSON, title: "Gewone JSON", preferArchive: true)
+        precondition(ordinaryImport.count == 1 && ordinaryImport[0].letters[0].text == String(decoding: ordinaryJSON, as: UTF8.self))
+        let textImport = try LibraryVault.importDocument(Data(large.utf8), title: "Grote tekst", preferArchive: false)
+        precondition(textImport[0].letters[0].text == large)
         let archived = try LibraryVault.exportJSON([chat])
-        let imported = try LibraryVault.importJSON(archived)
+        let imported = try LibraryVault.importDocument(archived, title: "Archief", preferArchive: true)
         precondition(imported[0].id != chat.id && imported[0].letters[0].id != person.id)
         precondition(imported[0].letters[0].text == large && imported[0].letters[0].date == person.date)
         precondition(imported[0].letters[1].status == .stopped)
@@ -82,6 +87,15 @@ enum Verification {
         precondition(renamed.count == 1)
         try await files.delete(renamed[0])
         do { _ = try await files.file("../../outside.gguf"); fatalError("Path traversal accepted") } catch is VrijError {}
+        let cancelled = Task {
+            withUnsafeCurrentTask { $0?.cancel() }
+            return try await files.ingest([alternative])
+        }
+        do { _ = try await cancelled.value; fatalError("Cancelled import committed") }
+        catch is CancellationError {}
+        let afterCancellation = try await files.all()
+        precondition(afterCancellation.isEmpty, "Cancelled imports must not appear as installed models")
+
         let base = URL(string: ProcessInfo.processInfo.environment["VRIJ_TEST_SERVER"]!)!
         let download = try await files.download([base.appendingPathComponent("valid.gguf")]) { _ in }
         let urls = try await files.export(download[0])

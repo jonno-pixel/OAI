@@ -259,10 +259,10 @@ private struct ModelShelf: View {
             List {
                 Section {
                     Button("Importeer GGUF uit Bestanden", systemImage: "folder.badge.plus") { importing = true }
-                    Button("Download GGUF via URL", systemImage: "arrow.down.circle") { downloading = true }.disabled(space.downloading)
+                    Button("Download GGUF via URL", systemImage: "arrow.down.circle") { downloading = true }
                     if space.downloading {
                         ProgressView(space.transfer)
-                        Button("Download annuleren", role: .cancel) { space.cancelDownload() }
+                        Button("Downloads annuleren", role: .cancel) { space.cancelDownload() }
                     } else if !space.transfer.isEmpty { Text(space.transfer).font(.footnote).foregroundStyle(.secondary) }
                 } footer: {
                     Text("Importeer losse GGUF-bestanden of een map. Selecteer bij gesplitste modellen alle delen samen. Je modelbestanden worden ongewijzigd opgeslagen.")
@@ -356,7 +356,7 @@ private struct Preferences: View {
                     Text("Tekstimport bewaart het hele bestand als een nieuw bericht. Tekstexport is een leesbaar transcript. JSON bewaart de rollen en berichtstatussen. Afbeeldingen en PDF-scans worden lokaal als tekst gelezen; lokale spraakherkenning vraagt iOS-toestemming.")
                 }
                 Section("Over JJS Vrij") {
-                    LabeledContent("Versie", value: "2.0.1")
+                    LabeledContent("Versie", value: "2.0.2")
                     NavigationLink("Open-sourcelicentie") {
                         ScrollView { Text(license).textSelection(.enabled).padding() }.navigationTitle("Licentie")
                     }

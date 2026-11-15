@@ -72,7 +72,10 @@ actor ModelFiles {
         let input = try FileHandle(forReadingFrom: url)
         defer { try? input.close() }
         var state = SHA256()
-        while let bytes = try input.read(upToCount: 1_048_576), !bytes.isEmpty { state.update(data: bytes) }
+        while let bytes = try input.read(upToCount: 1_048_576), !bytes.isEmpty {
+            try Task.checkCancellation()
+            state.update(data: bytes)
+        }
         return state.finalize()
     }
 
@@ -120,6 +123,7 @@ actor ModelFiles {
             guard try hash(source) == hash(target) else { throw VrijError("De modelkopie is niet identiek aan het bronbestand.") }
         }
         // Moving the entire staging directory makes partial imports invisible.
+        try Task.checkCancellation()
         try FileManager.default.moveItem(at: staging, to: final)
         committed = true
         return try all().filter { $0.relativePath.hasPrefix(group + "/") }

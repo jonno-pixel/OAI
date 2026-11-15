@@ -1,4 +1,4 @@
-name: JJS Vrij 2.0.1 standalone native build
+name: JJS Vrij 2.0.2 standalone native build
 on:
   workflow_dispatch:
   push:
@@ -51,27 +51,27 @@ jobs:
           mkdir -p build/ipa/Payload
           ditto "$APP" build/ipa/Payload/JJSVrij.app
           cd build/ipa
-          zip -qry ../JJS-Vrij-2.0.1-unsigned.ipa Payload
-          unzip -t ../JJS-Vrij-2.0.1-unsigned.ipa
+          zip -qry ../JJS-Vrij-2.0.2-unsigned.ipa Payload
+          unzip -t ../JJS-Vrij-2.0.2-unsigned.ipa
       - name: Package standalone source and Xcode project
         if: always()
         run: |
           mkdir -p build
-          zip -qry build/JJS-Vrij-2.0.1-source.zip .gitignore Sources Tests scripts Frameworks Assets.xcassets JJSVrij.xcodeproj Info.plist PrivacyInfo.xcprivacy LLAMA-LICENSE.txt README.md SourceManifest.json
+          zip -qry build/JJS-Vrij-2.0.2-source.zip .gitignore Sources Tests scripts Frameworks Assets.xcassets JJSVrij.xcodeproj Info.plist PrivacyInfo.xcprivacy LLAMA-LICENSE.txt README.md AUDIT.md SourceManifest.json
       - uses: actions/upload-artifact@v4
         with:
-          name: JJS-Vrij-2.0.1-native-IPA
-          path: JJS-Vrij/build/JJS-Vrij-2.0.1-unsigned.ipa
+          name: JJS-Vrij-2.0.2-native-IPA
+          path: JJS-Vrij/build/JJS-Vrij-2.0.2-unsigned.ipa
           if-no-files-found: error
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: JJS-Vrij-2.0.1-source
-          path: JJS-Vrij/build/JJS-Vrij-2.0.1-source.zip
+          name: JJS-Vrij-2.0.2-source
+          path: JJS-Vrij/build/JJS-Vrij-2.0.2-source.zip
           if-no-files-found: error
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: JJS-Vrij-2.0.1-build-log
+          name: JJS-Vrij-2.0.2-build-log
           path: JJS-Vrij/build.log
           if-no-files-found: ignore

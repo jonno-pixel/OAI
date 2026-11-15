@@ -27,8 +27,16 @@ actor LibraryVault {
         writtenRevision = state.revision
     }
 
-    func decodeArchive(_ url: URL) throws -> [Conversation] {
-        try Self.importJSON(Data(contentsOf: url))
+    func decodeDocument(_ url: URL) throws -> [Conversation] {
+        let data = try Data(contentsOf: url)
+        return try Self.importDocument(data, title: url.deletingPathExtension().lastPathComponent,
+                                       preferArchive: url.pathExtension.lowercased() == "json")
+    }
+
+    static func importDocument(_ data: Data, title: String, preferArchive: Bool) throws -> [Conversation] {
+        if preferArchive, let conversations = try? importJSON(data) { return conversations }
+        let text = try TextTransfer.decode(data)
+        return [Conversation(name: title, letters: [Letter(speaker: .person, text: text)])]
     }
 
     func exportFile(_ conversations: [Conversation], plain: Bool) throws -> URL {

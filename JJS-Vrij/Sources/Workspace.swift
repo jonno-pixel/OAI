@@ -22,6 +22,7 @@ final class Workspace: ObservableObject {
     private var queue: Task<Void, Never>?
     private var inference: Task<RuntimeSummary, Error>?
     private var downloadTask: Task<Void, Never>?
+    private var waitingDownloads: [[URL]] = []
     private var foreground = true
 
     init() {
@@ -217,25 +218,49 @@ final class Workspace: ObservableObject {
     }
 
     func downloadModels(_ input: String) {
-        guard !downloading, let modelFiles else { return }
+        guard modelFiles != nil else { return }
         let lines = input.split(whereSeparator: \.isNewline).map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }.filter { !$0.isEmpty }
         let links = lines.compactMap(URL.init(string:))
         guard !links.isEmpty, links.count == lines.count else { problem = "Vul geldige rechtstreekse GGUF-bestandslinks in, één per regel."; return }
+        waitingDownloads.append(links)
+        if downloading {
+            transfer = "Download toegevoegd · \(waitingDownloads.count) wachtend"
+        }
+        startDownloads()
+    }
+
+    private func startDownloads() {
+        guard downloadTask == nil, let modelFiles else { return }
         downloading = true
         downloadTask = Task {
-            defer { downloading = false; downloadTask = nil }
-            do {
-                let added = try await modelFiles.download(links) { value in await self.transferStatus(value) }
-                try await reloadModels()
-                if let first = added.first { library.settings.model = first.id }
-                try await checkpoint(); transfer = "Download voltooid"
-            } catch is CancellationError { transfer = "Download geannuleerd" }
-            catch let error as URLError where error.code == .cancelled { transfer = "Download geannuleerd" }
-            catch { problem = error.localizedDescription; transfer = "Download mislukt" }
+            defer {
+                downloading = false; downloadTask = nil
+                if !waitingDownloads.isEmpty { startDownloads() }
+            }
+            while !waitingDownloads.isEmpty {
+                let links = waitingDownloads.removeFirst()
+                do {
+                    try Task.checkCancellation()
+                    let added = try await modelFiles.download(links) { value in await self.transferStatus(value) }
+                    try await reloadModels()
+                    if let first = added.first { library.settings.model = first.id }
+                    try await checkpoint(); transfer = "Download voltooid"
+                } catch is CancellationError {
+                    transfer = "Downloads geannuleerd"; break
+                } catch let error as URLError where error.code == .cancelled {
+                    transfer = "Downloads geannuleerd"; break
+                } catch {
+                    problem = error.localizedDescription; transfer = "Download mislukt"
+                }
+            }
         }
     }
+
     private func transferStatus(_ value: String) { transfer = value }
-    func cancelDownload() { downloadTask?.cancel() }
+    func cancelDownload() {
+        waitingDownloads.removeAll()
+        downloadTask?.cancel()
+    }
 
     func readAttachment(_ url: URL) async throws -> String { try await media.text(from: url) }
 
@@ -243,13 +268,7 @@ final class Workspace: ObservableObject {
         let access = url.startAccessingSecurityScopedResource()
         defer { if access { url.stopAccessingSecurityScopedResource() } }
         do {
-            let added: [Conversation]
-            if url.pathExtension.lowercased() == "json" {
-                added = try await vault.decodeArchive(url)
-            } else {
-                added = [Conversation(name: url.deletingPathExtension().lastPathComponent,
-                                      letters: [Letter(speaker: .person, text: try await media.text(from: url))])]
-            }
+            let added = try await vault.decodeDocument(url)
             library.conversations.insert(contentsOf: added, at: 0)
             selected = added.first?.id ?? selected
             try await checkpoint()

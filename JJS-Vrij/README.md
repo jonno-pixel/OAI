@@ -1,4 +1,4 @@
-# JJS Vrij 2.0
+# JJS Vrij 2.0.2
 
 Een nieuw zelfstandig Swift/SwiftUI-project voor lokale GGUF-gesprekken, geschreven voor de eisen in deze opdracht. Het Xcode-project compileert uitsluitend de acht Swift-bestanden in deze map onder `Sources/`. Geen van de appbronbestanden uit `jjs-original/` wordt gebruikt. Het projectbestand wordt onafhankelijk gegenereerd met `scripts/make_project.py`.
 
@@ -41,7 +41,7 @@ Modelbestanden worden niet aangepast. De gewone-tekstweergave toont de ontvangen
 
 ## Bouwen en controleren
 
-Open `JJSVrij.xcodeproj` met Xcode op een Mac. Het framework ondersteunt echte iPhones/iPads, niet de simulator. Bundle-ID: `nl.jjs.vrij`; versie: `2.0`.
+Open `JJSVrij.xcodeproj` met Xcode op een Mac. Het framework ondersteunt echte iPhones/iPads, niet de simulator. Bundle-ID: `nl.jjs.vrij`; versie: `2.0.2`.
 
 ```bash
 python3 scripts/verify.py
@@ -51,3 +51,7 @@ bash scripts/build.sh CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN
 De verificatie test tekstcoderingen, Unicode, lange tekst, atomaire opslag, revisievolgorde, herstel van onderbroken antwoorden, JSON-overdracht, GGUF-bestandsoverdracht, gesplitste modellen en afgewezen downloads. GGUF-overdrachtstests gebruiken herkenbare bestandsfixtures en zijn geen inferentietest met een echt model.
 
 De GitHub-build compileert het zelfstandige project met een iOS 26 SDK of nieuwer en controleert het ARM64-bestand, de resources en de IPA. Er is geen echt iOS-toestel beschikbaar in deze omgeving. App Store-toelating of foutloze werking is niet aangetoond. Voor distributie zijn Apple-ondertekening, provisioning, App Store Connect-metadata, privacybeleid-/support-URLs, screenshots, toesteltests en beoordeling door Apple nodig. De geleverde IPA is ongetekend.
+
+## Controle van blokkades in 2.0.2
+
+Zie `AUDIT.md` voor de gecontroleerde codepaden, gevonden blokkades, concrete wijzigingen en grenzen van de verificatie. Gewone JSON-documenten kunnen nu ook als tekst worden geïmporteerd. Extra GGUF-downloads kunnen tijdens een lopende overdracht worden toegevoegd aan de wachtrij. Annuleren ruimt de wachtrij op en maakt een nog niet afgeronde import niet zichtbaar als geïnstalleerd model.
